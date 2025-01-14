@@ -66,7 +66,6 @@ $ how to list all running processes
 
 ps aux
 
-$
 ```
 
 #### Find the biggest directories
@@ -75,7 +74,6 @@ $
 $ how to find the 5 biggest directories in my home
 
 du -ah ~ | sort -rh | head -n 5
-
 ```
 
 ---
