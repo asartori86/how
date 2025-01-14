@@ -2,7 +2,7 @@
 
 # MIT License
 
-# Copyright (c) 2025 Alberto Sartori 
+# Copyright (c) 2025 Alberto Sartori
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import hashlib
 import json
 import os
+import pickle
 import random
 import sys
 import time
@@ -38,26 +40,45 @@ def simulated_typing(text):
     print()
 
 
+def get_hash(data):
+    """Generates a hash for the given data."""
+    data_str = json.dumps(data, sort_keys=True)
+    return hashlib.sha256(data_str.encode()).hexdigest()
+
+
+def load_cache(cache_file="response_cache.pkl"):
+    """Loads the cache from a file."""
+    if os.path.exists(cache_file):
+        with open(cache_file, "rb") as f:
+            return pickle.load(f)
+    return None
+
+
+def save_cache(cache, cache_file="response_cache.pkl"):
+    """Saves the cache to a file."""
+    with open(cache_file, "wb") as f:
+        pickle.dump(cache, f)
+
+
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     print("Error: OPENAI_API_KEY environment variable is not set.", file=sys.stderr)
     sys.exit(1)
 
-client = OpenAI(api_key=api_key)
-
 if len(sys.argv) < 2:
     print("Error: Please complete the sentence.", file=sys.stderr)
     sys.exit(1)
 
+client = OpenAI(api_key=api_key)
+
 question = "how " + " ".join(sys.argv[1:]) + "?"
 
-try:
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "developer",
-                "content": """
+query = dict(
+    model="gpt-4o-mini",
+    messages=[
+        {
+            "role": "developer",
+            "content": """
                 You are a helpful assistant specialized in Linux command-line usage and scripting. 
                 Here are your rules:
                 1. Provide concise responses.
@@ -67,15 +88,34 @@ try:
                 5. Assume Bash for single-line answers unless another language is specified.
                 6. Return JSON only; no extra text or commentary.
                 """,
-            },
-            {"role": "user", "content": question},
-        ],
-        temperature=0.1,
-    )
+        },
+        {"role": "user", "content": question},
+    ],
+    temperature=0.1,
+)
+
+query_hash = get_hash(query)
+# Load cache
+cache_dir = os.path.join(os.getenv("HOME"), ".cache", "how")
+print(f"{cache_dir=}")
+os.makedirs(cache_dir, exist_ok=True)
+cache_file = os.path.join(cache_dir, "response_cache.pkl")
+cache = load_cache(cache_file)
+
+try:
+    if query_hash in cache:
+        completion = cache[query_hash]
+        print("served from cache")
+    else:
+        completion = client.chat.completions.create(**query)
+        # Cache the response
+        cache[query_hash] = completion
+        save_cache(cache, cache_file)
     input_string = completion.choices[0].message.content
     cleaned_string = input_string.strip("```json").strip()
     data = json.loads(cleaned_string)
     code_value = data["code"]
+
 except Exception as e:
     print(f"Error: {e}", file=sys.stderr)
     sys.exit(1)
