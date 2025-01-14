@@ -120,4 +120,4 @@ except Exception as e:
     print(f"Error: {e}", file=sys.stderr)
     sys.exit(1)
 
-simulated_typing(f"\n{code_value}\n")
+simulated_typing("\n" + code_value.replace("\\n", "\n") + "\n")
