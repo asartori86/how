@@ -60,40 +60,23 @@ how <your-query>
 ```
 
 ### **Examples**
-#### Example 1: Create a New Directory
+#### List All Running Processes
 ```bash
-./how to create a new directory
-```
+$ how to list all running processes
 
-**Output** (simulated typing):
-```bash
-mkdir <directory-name>
-```
-
-#### Example 2: List All Running Processes
-```bash
-./how to list all running processes
-```
-
-**Output** (simulated typing):
-```bash
 ps aux
+
+$
 ```
 
----
+#### Find the biggest directories
+```bash
 
-## **File Structure**
-- `how`: Bash wrapper script for easy usage.
-- `how_to.py`: Python script that interacts with the OpenAI API.
+$ how to find the 5 biggest directories in my home
 
----
+du -ah ~ | sort -rh | head -n 5
 
-## **How It Works**
-
-1. **Input**: The Bash script forwards user queries to the Python script.
-2. **Query Formation**: The Python script formats the query as a question.
-3. **OpenAI API Interaction**: Sends the query to the GPT model with specific instructions for concise, JSON-formatted responses.
-4. **Response Handling**: Extracts the code snippet from the response and displays it via simulated typing.
+```
 
 ---
 
