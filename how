@@ -24,6 +24,7 @@
 
 import hashlib
 import json
+import logging
 import os
 import pickle
 import random
@@ -31,6 +32,21 @@ import sys
 import time
 
 from openai import APIError, OpenAI
+
+LOGGING_LEVEL = os.getenv("HOW_LOG_LEVEL")
+
+if LOGGING_LEVEL:
+    if not LOGGING_LEVEL in logging._nameToLevel.keys():
+        print(
+            f'ERROR: Invalid HOW_LOG_LEVEL value "{LOGGING_LEVEL}". Must be one of: {list(logging._nameToLevel.keys())}',
+            file=sys.stderr,
+        )
+        exit(1)
+    LOGGING_LEVEL = eval(f"logging.{LOGGING_LEVEL}")
+else:
+    LOGGING_LEVEL = logging.ERROR
+
+logging.basicConfig(level=LOGGING_LEVEL)
 
 
 def simulated_typing(text):
@@ -62,11 +78,11 @@ def save_cache(cache, cache_file="response_cache.pkl"):
 
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
-    print("Error: OPENAI_API_KEY environment variable is not set.", file=sys.stderr)
+    logging.error("OPENAI_API_KEY environment variable is not set.")
     sys.exit(1)
 
 if len(sys.argv) < 2:
-    print("Error: Please complete the sentence.", file=sys.stderr)
+    logging.error("Please complete the sentence.")
     sys.exit(1)
 
 client = OpenAI(api_key=api_key)
@@ -94,6 +110,8 @@ query = dict(
     temperature=0.1,
 )
 
+logging.debug(f"Query sent to API: {query}")
+
 query_hash = get_hash(query)
 # Load cache
 cache_dir = os.path.join(os.getenv("HOME"), ".cache", "how")
@@ -104,19 +122,20 @@ cache = load_cache(cache_file)
 try:
     if query_hash in cache:
         completion = cache[query_hash]
-        print("served from cache")
+        logging.debug(f"{query_hash} served from cache")
     else:
         completion = client.chat.completions.create(**query)
         # Cache the response
         cache[query_hash] = completion
         save_cache(cache, cache_file)
+        logging.debug(f"{query_hash} stored to cache")
     input_string = completion.choices[0].message.content
     cleaned_string = input_string.strip("```json").strip()
     data = json.loads(cleaned_string)
     code_value = data["code"]
 
 except Exception as e:
-    print(f"Error: {e}", file=sys.stderr)
+    logging.error(e)
     sys.exit(1)
 
 simulated_typing("\n" + code_value.replace("\\n", "\n") + "\n")
