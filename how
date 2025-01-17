@@ -52,6 +52,8 @@ logging.basicConfig(level=LOGGING_LEVEL)
 
 class Entertainment:
     def __enter__(self):
+        sys.stdout.write("\n")
+        sys.stdout.flush()
         self.done = False
         self.spinner = threading.Thread(target=self.thinking)
         self.spinner.start()
@@ -66,7 +68,7 @@ class Entertainment:
             for x in "?*@x%&8y!#z":
                 if self.done:
                     break
-                sys.stdout.write("\r Thinking " + x)
+                sys.stdout.write("\r" + x)
                 sys.stdout.flush()
                 time.sleep(0.150)
 
@@ -163,4 +165,4 @@ except Exception as e:
     logging.error(e)
     sys.exit(1)
 
-simulated_typing("\n" + code_value.replace("\\n", "\n") + "\n")
+simulated_typing(code_value.replace("\\n", "\n") + "\n")
