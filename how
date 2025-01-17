@@ -29,6 +29,7 @@ import os
 import pickle
 import random
 import sys
+import threading
 import time
 
 from openai import APIError, OpenAI
@@ -47,6 +48,27 @@ else:
     LOGGING_LEVEL = logging.ERROR
 
 logging.basicConfig(level=LOGGING_LEVEL)
+
+
+class Entertainment:
+    def __enter__(self):
+        self.done = False
+        self.spinner = threading.Thread(target=self.thinking)
+        self.spinner.start()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.done = True
+        self.spinner.join()
+        sys.stdout.write("\r\033[K")
+
+    def thinking(self):
+        while not self.done:
+            for x in "?*@x%&8y!#z":
+                if self.done:
+                    break
+                sys.stdout.write("\r Thinking " + x)
+                sys.stdout.flush()
+                time.sleep(0.150)
 
 
 def simulated_typing(text):
@@ -120,24 +142,25 @@ cache_file = os.path.join(cache_dir, "response_cache.pkl")
 cache = load_cache(cache_file)
 
 try:
-    if query_hash in cache:
-        completion = cache[query_hash]
-        logging.debug(f"{query_hash} served from cache")
-    else:
-        completion = client.chat.completions.create(**query)
-        # Cache the response
-        cache[query_hash] = completion
-        save_cache(cache, cache_file)
-        logging.debug(f"{query_hash} stored to cache")
-    input_string = completion.choices[0].message.content
-    cleaned_string = input_string.strip("```json").strip()
-    data = json.loads(cleaned_string)
-    code_value = data["code"]
+    with Entertainment():
+        if query_hash in cache:
+            completion = cache[query_hash]
+            logging.debug(f"{query_hash} served from cache")
+        else:
+            completion = client.chat.completions.create(**query)
+            # Cache the response
+            cache[query_hash] = completion
+            save_cache(cache, cache_file)
+            logging.debug(f"{query_hash} stored to cache")
+        input_string = completion.choices[0].message.content
+        cleaned_string = input_string.strip("```json").strip()
+        data = json.loads(cleaned_string)
+        code_value = data["code"]
+        if isinstance(code_value, list):
+            code_value = "\n".join(code_value)
 
 except Exception as e:
     logging.error(e)
     sys.exit(1)
 
-if isinstance(code_value,list):
-    code_value = '\n'.join(code_value)
 simulated_typing("\n" + code_value.replace("\\n", "\n") + "\n")
