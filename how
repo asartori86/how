@@ -138,4 +138,6 @@ except Exception as e:
     logging.error(e)
     sys.exit(1)
 
+if isinstance(code_value,list):
+    code_value = '\n'.join(code_value)
 simulated_typing("\n" + code_value.replace("\\n", "\n") + "\n")
