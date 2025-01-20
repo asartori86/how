@@ -74,11 +74,18 @@ class Entertainment:
 
 
 def simulated_typing(text):
-    for char in text:
-        print(char, end="", flush=True)
-        time.sleep(random.uniform(0.01, 0.1))
-    print()
-
+    if isinstance(text,str):
+        for char in text.replace("\\n","\n"):
+            print(char, end="", flush=True)
+            time.sleep(random.uniform(0.001, 0.1))
+        print()
+    elif isinstance(text,(list,tuple,set)):
+        for x in text:
+            simulated_typing(x)
+    elif isinstance(text, dict):
+        simulated_typing(json.dumps(text),indent=2)
+    else:
+        simulated_typing(f"{text}")
 
 def get_hash(data):
     """Generates a hash for the given data."""
@@ -154,15 +161,12 @@ try:
             cache[query_hash] = completion
             save_cache(cache, cache_file)
             logging.debug(f"{query_hash} stored to cache")
-        input_string = completion.choices[0].message.content
-        cleaned_string = input_string.strip("```json").strip()
-        data = json.loads(cleaned_string)
-        code_value = data["code"]
-        if isinstance(code_value, list):
-            code_value = "\n".join(code_value)
+        input_string = completion.choices[0].message.content.strip("```json")
+        code_value = json.loads(input_string)["code"]
 
 except Exception as e:
     logging.error(e)
     sys.exit(1)
 
-simulated_typing(code_value.replace("\\n", "\n") + "\n")
+simulated_typing(code_value)
+print()
